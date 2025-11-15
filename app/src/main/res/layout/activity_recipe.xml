@@ -34,17 +34,10 @@
         tools:text="05:00" />
 
     <Button
-        android:id="@+id/buttonStart"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="Start Recipe" />
-
-    <Button
         android:id="@+id/buttonVoice"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="24dp"
         android:text="Start Voice Command" />
 
     <Button
