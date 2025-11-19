@@ -15,7 +15,8 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="레시피 알람" />
+            app:title="Cook navi"
+            app:titleCentered="true" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -23,11 +24,22 @@
         android:id="@+id/recipe_recycler_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        tools:listitem="@layout/recipe_list_item" /> <com.google.android.material.floatingactionbutton.FloatingActionButton
-    android:id="@+id/fab_add_recipe"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_gravity="bottom|end"
-    android:layout_margin="16dp"
-    android:src="@drawable/ic_add" /> </androidx.coordinatorlayout.widget.CoordinatorLayout>
+        tools:listitem="@layout/recipe_list_item"
+        android:background="@color/app_bg" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_add_recipe"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:contentDescription=""
+        android:src="@drawable/ic_add"
+        app:backgroundTint="?attr/colorPrimary" />
+
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

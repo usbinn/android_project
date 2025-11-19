@@ -1,72 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
+    android:background="?attr/colorSurface"
     tools:context=".CookingTimerActivity">
 
-    <TextView
-        android:id="@+id/current_step_title"
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:background="?attr/colorPrimary"
-        android:textColor="?attr/colorOnPrimary"
-        android:textAppearance="?attr/textAppearanceHeadline5"
-        tools:text="[3단계] 양념장 넣고 끓이기" />
+        android:layout_height="wrap_content">
 
-    <TextView
-        android:id="@+id/current_step_timer"
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar_timer"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="요리 타이머"
+            app:titleCentered="true"
+            app:navigationIcon="@drawable/ic_arrow_back" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
         android:gravity="center"
-        android:padding="48dp"
-        android:textSize="80sp"
-        android:textStyle="bold"
-        tools:text="14:59" />
+        android:padding="24dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:text="전체 진행 상황"
-        android:textAppearance="?attr/textAppearanceHeadline6"/>
+        <TextView
+            android:id="@+id/current_step_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+            android:textStyle="bold"
+            android:textColor="?attr/colorPrimary"
+            tools:text="[2단계] 면을 7분간 삶기" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/cooking_steps_recycler_view"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        tools:listitem="@layout/cooking_step_list_item"/> <LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:gravity="center"
-    android:padding="16dp">
+        <TextView
+            android:id="@+id/current_step_index"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            tools:text="2 / 4 단계" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/button_prev_step"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="이전"/>
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/circle_timer"
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:layout_marginTop="32dp"
+            app:indicatorSize="220dp"
+            app:trackThickness="16dp"
+            app:indicatorInset="8dp"
+            app:indicatorColor="?attr/colorPrimary"
+            app:trackColor="?attr/colorSurfaceVariant"
+            app:showAnimationBehavior="grow"
+            app:indeterminate="false" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/button_pause_play"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:text="일시정지" />
+        <TextView
+            android:id="@+id/current_step_timer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textSize="48sp"
+            android:textStyle="bold"
+            tools:text="07:00" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/button_next_step"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="다음"/>
-</LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:gravity="center"
+            android:orientation="horizontal">
 
-</LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_prev_step"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="이전" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_pause_play"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:text="시작"
+                app:icon="@drawable/ic_play" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_next_step"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="다음" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
