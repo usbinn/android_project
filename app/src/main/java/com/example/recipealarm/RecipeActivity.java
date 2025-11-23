@@ -166,6 +166,7 @@ public class RecipeActivity extends AppCompatActivity implements VoiceCommandHan
                 }
                 if (buttonPausePlay != null) {
                     buttonPausePlay.setText("일시정지");
+                    buttonPausePlay.setIconResource(R.drawable.ic_pause);
                 }
                 Toast.makeText(this, "레시피 시작: " + currentRecipe.getName(), Toast.LENGTH_SHORT).show();
             });
@@ -204,12 +205,28 @@ public class RecipeActivity extends AppCompatActivity implements VoiceCommandHan
                     // UI 업데이트
                     updateTimerUI(stepDescription, timeRemaining, stepIndex, totalSteps,
                             timeRemainingMs, stepDurationMs);
-                } else if (action.equals(TimerService.ACTION_TIMER_FINISH)) {
+                } else if (action.equals(TimerService.ACTION_TIMER_STATE_UPDATE)) {
+                    boolean isPaused = intent.getBooleanExtra(TimerService.EXTRA_IS_PAUSED, false);
+                    updatePausePlayButton(isPaused);
+                }
+                else if (action.equals(TimerService.ACTION_TIMER_FINISH)) {
                     Toast.makeText(context, "레시피가 종료되었습니다.", Toast.LENGTH_SHORT).show();
                     resetUi();
                 }
             }
         };
+    }
+
+    private void updatePausePlayButton(boolean isPaused) {
+        if (buttonPausePlay != null) {
+            if (isPaused) {
+                buttonPausePlay.setText("재생");
+                buttonPausePlay.setIconResource(R.drawable.ic_play);
+            } else {
+                buttonPausePlay.setText("일시정지");
+                buttonPausePlay.setIconResource(R.drawable.ic_pause);
+            }
+        }
     }
 
     /**
@@ -274,8 +291,11 @@ public class RecipeActivity extends AppCompatActivity implements VoiceCommandHan
      * 타이머 일시정지/재생 토글
      */
     private void toggleTimer() {
-        // TODO: TimerService에 일시정지/재생 기능 추가 필요
-        Toast.makeText(this, "일시정지 기능은 곧 추가될 예정입니다.", Toast.LENGTH_SHORT).show();
+        if (currentRecipe == null) return;
+        Intent serviceIntent = new Intent(this, TimerService.class);
+        serviceIntent.setAction(TimerService.ACTION_TOGGLE_PAUSE_RESUME);
+        serviceIntent.putExtra(TimerService.EXTRA_RECIPE_ID, currentRecipe.getId());
+        startService(serviceIntent);
     }
 
     /**
@@ -283,9 +303,10 @@ public class RecipeActivity extends AppCompatActivity implements VoiceCommandHan
      */
     private void navigateToPrevStep() {
         if (currentRecipe == null) return;
-
-        // TODO: TimerService에 단계 이동 기능 추가 필요
-        Toast.makeText(this, "단계 이동 기능은 곧 추가될 예정입니다.", Toast.LENGTH_SHORT).show();
+        Intent serviceIntent = new Intent(this, TimerService.class);
+        serviceIntent.setAction(TimerService.ACTION_PREVIOUS_STEP);
+        serviceIntent.putExtra(TimerService.EXTRA_RECIPE_ID, currentRecipe.getId());
+        startService(serviceIntent);
     }
 
     /**
@@ -293,9 +314,10 @@ public class RecipeActivity extends AppCompatActivity implements VoiceCommandHan
      */
     private void navigateToNextStep() {
         if (currentRecipe == null) return;
-
-        // TODO: TimerService에 단계 이동 기능 추가 필요
-        Toast.makeText(this, "단계 이동 기능은 곧 추가될 예정입니다.", Toast.LENGTH_SHORT).show();
+        Intent serviceIntent = new Intent(this, TimerService.class);
+        serviceIntent.setAction(TimerService.ACTION_NEXT_STEP);
+        serviceIntent.putExtra(TimerService.EXTRA_RECIPE_ID, currentRecipe.getId());
+        startService(serviceIntent);
     }
 
     @Override
@@ -307,6 +329,7 @@ public class RecipeActivity extends AppCompatActivity implements VoiceCommandHan
         IntentFilter filter = new IntentFilter();
         filter.addAction(TimerService.ACTION_TIMER_UPDATE);
         filter.addAction(TimerService.ACTION_TIMER_FINISH);
+        filter.addAction(TimerService.ACTION_TIMER_STATE_UPDATE);
         LocalBroadcastManager.getInstance(this).registerReceiver(timerUpdateReceiver, filter);
     }
 
