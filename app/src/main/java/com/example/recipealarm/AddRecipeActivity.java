@@ -55,6 +55,20 @@ public class AddRecipeActivity extends AppCompatActivity {
     private void addStepView() {
         LayoutInflater inflater = LayoutInflater.from(this);
         View stepView = inflater.inflate(R.layout.item_recipe_step_input, stepsContainer, false);
+        
+        // 삭제 버튼 설정
+        android.widget.ImageButton deleteButton = stepView.findViewById(R.id.button_delete_step);
+        if (deleteButton != null) {
+            deleteButton.setOnClickListener(v -> {
+                // 마지막 하나 남은 경우 삭제 방지
+                if (stepsContainer.getChildCount() > 1) {
+                    stepsContainer.removeView(stepView);
+                } else {
+                    Toast.makeText(this, "최소 하나의 단계가 필요합니다.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+        
         stepsContainer.addView(stepView);
     }
 

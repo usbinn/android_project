@@ -40,6 +40,10 @@ public class TimerService extends Service {
     public static final String EXTRA_RECIPE_ID = "EXTRA_RECIPE_ID";
     public static final String EXTRA_STEP_DESCRIPTION = "EXTRA_STEP_DESCRIPTION";
     public static final String EXTRA_TIME_REMAINING_FORMATTED = "EXTRA_TIME_REMAINING_FORMATTED";
+    public static final String EXTRA_STEP_INDEX = "EXTRA_STEP_INDEX";
+    public static final String EXTRA_TOTAL_STEPS = "EXTRA_TOTAL_STEPS";
+    public static final String EXTRA_TIME_REMAINING_MS = "EXTRA_TIME_REMAINING_MS";
+    public static final String EXTRA_STEP_DURATION_MS = "EXTRA_STEP_DURATION_MS";
     public static final String ACTION_TIMER_FINISH = "com.example.recipealarm.TIMER_FINISH";
 
     public static final String ACTION_START_TIMER = "com.example.recipealarm.ACTION_START_TIMER";
@@ -136,12 +140,20 @@ public class TimerService extends Service {
             oldTimer.cancel();
         }
 
-        CountDownTimer newTimer = new CountDownTimer(step.getDurationInSeconds() * 1000L, 1000) {
+        long stepDurationMs = step.getDurationInSeconds() * 1000L;
+        
+        // 초기 상태 브로드캐스트 (타이머 시작 전)
+        String initialTimeFormatted = formatTime(stepDurationMs);
+        broadcastUpdate(recipeId, step.getDescription(), initialTimeFormatted, 
+                stepIndex, recipe.getSteps().size(), stepDurationMs, stepDurationMs);
+        
+        CountDownTimer newTimer = new CountDownTimer(stepDurationMs, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
                 String timeFormatted = formatTime(millisUntilFinished);
-                // 테스트용 UI는 타이머 하나만 보여주므로, 마지막으로 업데이트된 타이머 정보만 전송
-                broadcastUpdate(recipeId, step.getDescription(), timeFormatted);
+                // 단계 정보와 진행률을 포함하여 브로드캐스트
+                broadcastUpdate(recipeId, step.getDescription(), timeFormatted, 
+                        stepIndex, recipe.getSteps().size(), millisUntilFinished, stepDurationMs);
                 updateForegroundNotification();
             }
 
@@ -184,11 +196,16 @@ public class TimerService extends Service {
                 .build();
     }
 
-    private void broadcastUpdate(String recipeId, String stepDescription, String timeRemaining) {
+    private void broadcastUpdate(String recipeId, String stepDescription, String timeRemaining, 
+                                 int stepIndex, int totalSteps, long timeRemainingMs, long stepDurationMs) {
         Intent intent = new Intent(ACTION_TIMER_UPDATE);
         intent.putExtra(EXTRA_RECIPE_ID, recipeId);
         intent.putExtra(EXTRA_STEP_DESCRIPTION, stepDescription);
         intent.putExtra(EXTRA_TIME_REMAINING_FORMATTED, timeRemaining);
+        intent.putExtra(EXTRA_STEP_INDEX, stepIndex);
+        intent.putExtra(EXTRA_TOTAL_STEPS, totalSteps);
+        intent.putExtra(EXTRA_TIME_REMAINING_MS, timeRemainingMs);
+        intent.putExtra(EXTRA_STEP_DURATION_MS, stepDurationMs);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 

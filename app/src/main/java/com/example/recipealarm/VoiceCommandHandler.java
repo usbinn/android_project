@@ -41,7 +41,9 @@ public class VoiceCommandHandler implements RecognitionListener {
     public VoiceCommandHandler(Context context, VoiceCommandCallback callback) {
         this.callback = callback;
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context);
-        speechRecognizer.setRecognitionListener(this);
+        if (speechRecognizer != null) {
+            speechRecognizer.setRecognitionListener(this);
+        }
 
         speechRecognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         speechRecognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -53,14 +55,18 @@ public class VoiceCommandHandler implements RecognitionListener {
      * 사용자에게 음성 인식을 위한 시스템 UI가 표시됩니다.
      */
     public void startListening() {
-        speechRecognizer.startListening(speechRecognizerIntent);
+        if (speechRecognizer != null) {
+            speechRecognizer.startListening(speechRecognizerIntent);
+        }
     }
 
     /**
      * 음성 입력을 중지합니다.
      */
     public void stopListening() {
-        speechRecognizer.stopListening();
+        if (speechRecognizer != null) {
+            speechRecognizer.stopListening();
+        }
     }
 
     /**
@@ -68,7 +74,9 @@ public class VoiceCommandHandler implements RecognitionListener {
      * 이 메소드는 호스팅하는 액티비티나 프래그먼트의 onDestroy()에서 호출되어야 합니다.
      */
     public void destroy() {
-        speechRecognizer.destroy();
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+        }
     }
 
     @Override

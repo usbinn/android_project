@@ -2,6 +2,7 @@ package com.example.recipealarm;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,6 +23,7 @@ public class RecipeListActivity extends AppCompatActivity implements RecipeAdapt
 
     private RecipeRepository recipeRepository;
     private RecipeAdapter recipeAdapter;
+    private View emptyStateView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,11 +32,18 @@ public class RecipeListActivity extends AppCompatActivity implements RecipeAdapt
 
         recipeRepository = new RecipeRepository(this);
 
+        // Toolbar 설정
+        com.google.android.material.appbar.MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
         // RecyclerView 설정
         RecyclerView recyclerView = findViewById(R.id.recipe_recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recipeAdapter = new RecipeAdapter(this, this);
         recyclerView.setAdapter(recipeAdapter);
+
+        // 빈 상태 뷰 설정
+        emptyStateView = findViewById(R.id.empty_state_view);
 
         // '레시피 추가' 버튼 설정
         FloatingActionButton fab = findViewById(R.id.fab_add_recipe);
@@ -55,12 +64,26 @@ public class RecipeListActivity extends AppCompatActivity implements RecipeAdapt
      */
     private void loadRecipes() {
         recipeRepository.getRecipes().whenComplete((recipes, throwable) -> {
-            if (throwable != null) {
-                runOnUiThread(() -> Toast.makeText(this, "레시피를 불러오는 데 실패했습니다.", Toast.LENGTH_SHORT).show());
-            } else {
-                runOnUiThread(() -> recipeAdapter.setRecipes(recipes));
-            }
+            runOnUiThread(() -> {
+                if (throwable != null) {
+                    Toast.makeText(this, "레시피를 불러오는 데 실패했습니다.", Toast.LENGTH_SHORT).show();
+                    updateEmptyState(recipes != null ? recipes : java.util.Collections.emptyList());
+                } else {
+                    recipeAdapter.setRecipes(recipes);
+                    updateEmptyState(recipes);
+                }
+            });
         });
+    }
+
+    /**
+     * 레시피 목록이 비어있을 때 빈 상태 뷰를 표시합니다.
+     */
+    private void updateEmptyState(List<Recipe> recipes) {
+        if (emptyStateView != null) {
+            boolean isEmpty = recipes == null || recipes.isEmpty();
+            emptyStateView.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+        }
     }
 
     /**
@@ -69,8 +92,8 @@ public class RecipeListActivity extends AppCompatActivity implements RecipeAdapt
      */
     @Override
     public void onRecipeClick(Recipe recipe) {
-        Intent intent = new Intent(this, RecipeActivity.class);
-        intent.putExtra(RecipeActivity.EXTRA_RECIPE_ID, recipe.getId());
+        Intent intent = new Intent(this, RecipeDetailActivity.class);
+        intent.putExtra(RecipeDetailActivity.EXTRA_RECIPE_ID, recipe.getId());
         startActivity(intent);
     }
 

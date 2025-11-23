@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 import com.google.gson.Gson;
 
 /**
@@ -51,9 +52,43 @@ public class RecipeTimer {
 
         long alarmTime = System.currentTimeMillis() + durationInMillis;
 
-        // 정확한 시간에 알람이 울리도록 setExact를 사용할 수 있으나, 여기서는 set을 사용합니다.
-        // 안드로이드 버전에 따라 setExactAndAllowWhileIdle 등을 고려해야 합니다.
-        alarmManager.set(AlarmManager.RTC_WAKEUP, alarmTime, pendingIntent);
+        // 정확한 시간에 알람이 울리도록 버전에 따라 적절한 메서드 사용
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                // Android 6.0 이상에서는 setExactAndAllowWhileIdle 사용 (Android 12 이상 권장)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    // Android 12 이상: setExactAndAllowWhileIdle 사용
+                    // 권한이 없으면 SecurityException 발생 가능
+                    if (alarmManager.canScheduleExactAlarms()) {
+                        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmTime, pendingIntent);
+                        Log.d("RecipeTimer", "알람 설정 성공 (setExactAndAllowWhileIdle): " + recipe.getName() + " 단계 " + stepIndex);
+                    } else {
+                        // 권한이 없으면 setExact로 대체 (덜 정확하지만 작동함)
+                        Log.w("RecipeTimer", "정확한 알람 권한이 없어 setExact로 대체합니다.");
+                        alarmManager.setExact(AlarmManager.RTC_WAKEUP, alarmTime, pendingIntent);
+                    }
+                } else {
+                    // Android 6.0 ~ 11
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, alarmTime, pendingIntent);
+                    Log.d("RecipeTimer", "알람 설정 성공 (setExact): " + recipe.getName() + " 단계 " + stepIndex);
+                }
+            } else {
+                // Android 6.0 미만 (레거시 지원)
+                alarmManager.set(AlarmManager.RTC_WAKEUP, alarmTime, pendingIntent);
+                Log.d("RecipeTimer", "알람 설정 성공 (set): " + recipe.getName() + " 단계 " + stepIndex);
+            }
+        } catch (SecurityException e) {
+            Log.e("RecipeTimer", "알람 설정 실패 (권한 없음): " + e.getMessage());
+            // 권한이 없으면 일반 알람으로 대체 시도
+            try {
+                alarmManager.set(AlarmManager.RTC_WAKEUP, alarmTime, pendingIntent);
+                Log.w("RecipeTimer", "일반 알람으로 대체 설정했습니다.");
+            } catch (Exception e2) {
+                Log.e("RecipeTimer", "알람 설정 완전 실패: " + e2.getMessage());
+            }
+        } catch (Exception e) {
+            Log.e("RecipeTimer", "알람 설정 중 오류 발생: " + e.getMessage(), e);
+        }
     }
 
     /**

@@ -64,16 +64,31 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.RecipeView
      */
     static class RecipeViewHolder extends RecyclerView.ViewHolder {
         private final TextView recipeNameText;
+        private final TextView recipeInfoText;
         private final ImageView favoriteIcon;
 
         public RecipeViewHolder(@NonNull View itemView) {
             super(itemView);
             recipeNameText = itemView.findViewById(R.id.recipe_name_text);
+            recipeInfoText = itemView.findViewById(R.id.recipe_info_text);
             favoriteIcon = itemView.findViewById(R.id.favorite_icon);
         }
 
         public void bind(final Recipe recipe, final OnRecipeClickListener recipeClickListener, final OnFavoriteClickListener favoriteClickListener) {
             recipeNameText.setText(recipe.getName());
+
+            // 총 시간과 단계 수 계산 및 표시
+            int totalSeconds = 0;
+            int stepCount = recipe.getSteps().size();
+            for (com.example.recipealarm.RecipeStep step : recipe.getSteps()) {
+                totalSeconds += step.getDurationInSeconds();
+            }
+            int totalMinutes = totalSeconds / 60;
+            String infoText = "총 " + totalMinutes + "분";
+            if (stepCount > 0) {
+                infoText += " · " + stepCount + "단계";
+            }
+            recipeInfoText.setText(infoText);
 
             if (recipe.isFavorite()) {
                 favoriteIcon.setImageResource(android.R.drawable.btn_star_big_on);

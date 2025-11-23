@@ -35,22 +35,23 @@
         <LinearLayout
             android:id="@+id/steps_container"
             android:layout_width="match_parent"
-            android_height="wrap_content"
+            android:layout_height="wrap_content"
             android:orientation="vertical" />
     </ScrollView>
 
     <Button
         android:id="@+id/add_step_button"
         android:layout_width="match_parent"
-        android.layout_height="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="단계 추가" />
 
     <Button
         android:id="@+id/save_recipe_button"
         android:layout_width="match_parent"
-        android.layout_height="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="레시피 저장" />
 
 </LinearLayout>
+
