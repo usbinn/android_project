@@ -154,7 +154,7 @@ public class RecipeTimer {
     }
 
     /** 밀리초를 "mm:ss" 형식의 문자열로 변환합니다. */
-    private String formatTime(long millis) {
+    public String formatTime(long millis) {
         long minutes = (millis / 1000) / 60;
         long seconds = (millis / 1000) % 60;
         return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
@@ -166,6 +166,10 @@ public class RecipeTimer {
 
     public int getCurrentStepIndex() {
         return currentStepIndex;
+    }
+
+    public long getTimeRemainingInStepMs() {
+        return timeRemainingInStepMs;
     }
 
     // --- Static AlarmManager Methods (Unchanged) ---

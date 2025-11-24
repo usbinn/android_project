@@ -168,34 +168,62 @@ public class TimerService extends Service implements RecipeTimer.TimerListener {
         
         String title;
         String text;
+        String recipeId = null;
 
         if (timerCount == 1) {
+            // 타이머가 하나일 경우, 남은 시간과 함께 상세 정보 표시
             RecipeTimer timer = activeTimers.values().iterator().next();
-            Recipe recipe = timer.getRecipe();
-            RecipeStep step = recipe.getSteps().get(timer.getCurrentStepIndex());
+            recipeId = timer.getRecipe().getId();
+            RecipeStep step = timer.getRecipe().getSteps().get(timer.getCurrentStepIndex());
+
+            long remainingMillis = timer.getTimeRemainingInStepMs();
+            String timeFormatted = formatTime(remainingMillis);
+
             title = "진행 중: " + step.getDescription();
-            text = recipe.getName();
+            text = timer.getRecipe().getName() + " - " + timeFormatted;
         } else {
+            // 여러 타이머일 경우, 개수만 표시
             title = timerCount + "개의 레시피가 진행 중입니다.";
             text = activeTimers.values().stream()
                     .map(t -> t.getRecipe().getName())
                     .collect(java.util.stream.Collectors.toList()).toString();
         }
-        startForeground(NOTIFICATION_ID, createNotification(title, text));
+        startForeground(NOTIFICATION_ID, createNotification(title, text, recipeId));
     }
 
-    private Notification createNotification(String title, String text) {
-        // 알림 클릭 시 MainActivity를 열도록 Intent 설정
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+    private Notification createNotification(String title, String text, String recipeId) {
+        Intent notificationIntent;
+        if (recipeId != null) {
+            // 타이머가 하나일 경우, 해당 레시피의 타이머 화면으로 직접 이동
+            notificationIntent = new Intent(this, RecipeActivity.class);
+            notificationIntent.putExtra(EXTRA_RECIPE_ID, recipeId);
+            // 이미 열려있는 액티비티가 있으면, 상단으로 가져오고 다시 생성하지 않음
+            notificationIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        } else {
+            // 그 외의 경우 (여러 타이머 등), 메인 화면으로 이동
+            notificationIntent = new Intent(this, MainActivity.class);
+        }
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                notificationIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentIntent(pendingIntent) // PendingIntent 설정
-                .setOnlyAlertOnce(true)
+                .setContentIntent(pendingIntent)
+                .setOnlyAlertOnce(true) // 알림 업데이트 시 소리/진동 방지
                 .build();
+    }
+
+    private String formatTime(long millis) {
+        long minutes = (millis / 1000) / 60;
+        long seconds = (millis / 1000) % 60;
+        return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
     }
 
     @Override
