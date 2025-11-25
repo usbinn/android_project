@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.recipealarm.utils.Constants;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
 import java.util.ArrayList;
@@ -20,8 +21,6 @@ import java.util.List;
  * 사용자는 이 화면에서 레시피의 모든 단계를 확인하고, "요리 시작" 버튼을 눌러 타이머를 시작할 수 있습니다.
  */
 public class RecipeDetailActivity extends AppCompatActivity {
-
-    public static final String EXTRA_RECIPE_ID = "com.example.recipealarm.EXTRA_RECIPE_ID";
 
     private RecipeRepository recipeRepository;
     private Recipe currentRecipe;
@@ -42,7 +41,7 @@ public class RecipeDetailActivity extends AppCompatActivity {
 
         recipeRepository = new RecipeRepository(this);
 
-        String recipeId = getIntent().getStringExtra(EXTRA_RECIPE_ID);
+        String recipeId = getIntent().getStringExtra(Constants.EXTRA_RECIPE_ID);
         if (recipeId == null || recipeId.isEmpty()) {
             Toast.makeText(this, "레시피 정보를 불러올 수 없습니다.", Toast.LENGTH_SHORT).show();
             finish();
@@ -124,7 +123,7 @@ public class RecipeDetailActivity extends AppCompatActivity {
         }
 
         Intent intent = new Intent(this, RecipeActivity.class);
-        intent.putExtra(RecipeActivity.EXTRA_RECIPE_ID, currentRecipe.getId());
+        intent.putExtra(Constants.EXTRA_RECIPE_ID, currentRecipe.getId());
         startActivity(intent);
     }
 
@@ -182,4 +181,5 @@ public class RecipeDetailActivity extends AppCompatActivity {
         }
     }
 }
+
 

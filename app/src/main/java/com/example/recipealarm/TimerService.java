@@ -4,7 +4,6 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.CountDownTimer;
@@ -15,6 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.example.recipealarm.utils.Constants;
 import com.google.gson.Gson;
 
 import java.util.Locale;
@@ -35,24 +35,15 @@ public class TimerService extends Service {
     private static final String CHANNEL_ID = "timer_service_channel";
     private static final int NOTIFICATION_ID = 1;
 
-    // Actions and Extras for communication
-    public static final String ACTION_TIMER_UPDATE = "com.example.recipealarm.TIMER_UPDATE";
-    public static final String EXTRA_RECIPE_ID = "EXTRA_RECIPE_ID";
-    public static final String EXTRA_STEP_DESCRIPTION = "EXTRA_STEP_DESCRIPTION";
-    public static final String EXTRA_TIME_REMAINING_FORMATTED = "EXTRA_TIME_REMAINING_FORMATTED";
-    public static final String EXTRA_STEP_INDEX = "EXTRA_STEP_INDEX";
-    public static final String EXTRA_TOTAL_STEPS = "EXTRA_TOTAL_STEPS";
-    public static final String EXTRA_TIME_REMAINING_MS = "EXTRA_TIME_REMAINING_MS";
-    public static final String EXTRA_STEP_DURATION_MS = "EXTRA_STEP_DURATION_MS";
-    public static final String ACTION_TIMER_FINISH = "com.example.recipealarm.TIMER_FINISH";
-
-    public static final String ACTION_START_TIMER = "com.example.recipealarm.ACTION_START_TIMER";
-    public static final String ACTION_STOP_TIMER = "com.example.recipealarm.ACTION_STOP_TIMER";
+    // Extras for communication (Actions are in Constants)
+    public static final String EXTRA_RECIPE_ID = Constants.EXTRA_RECIPE_ID;
 
     // 멀티 타이머 관리를 위한 Map
     private final Map<String, CountDownTimer> activeTimers = new ConcurrentHashMap<>();
     private final Map<String, Recipe> activeRecipes = new ConcurrentHashMap<>();
     private final Map<String, Integer> activeSteps = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> pausedStates = new ConcurrentHashMap<>();
+    private final Map<String, Long> pausedTimeRemaining = new ConcurrentHashMap<>();
 
     @Override
     public void onCreate() {
@@ -64,7 +55,9 @@ public class TimerService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && intent.getAction() != null) {
             String action = intent.getAction();
-            if (action.equals(ACTION_START_TIMER)) {
+            String recipeId = intent.getStringExtra(EXTRA_RECIPE_ID);
+            
+            if (Constants.ACTION_START_TIMER.equals(action)) {
                 String recipeJson = intent.getStringExtra(RecipeTimer.EXTRA_RECIPE_JSON);
                 if (recipeJson != null) {
                     Recipe recipe = new Gson().fromJson(recipeJson, Recipe.class);
@@ -72,10 +65,22 @@ public class TimerService extends Service {
                         startRecipeTimer(recipe);
                     }
                 }
-            } else if (action.equals(ACTION_STOP_TIMER)) {
-                String recipeId = intent.getStringExtra(EXTRA_RECIPE_ID);
+            } else if (Constants.ACTION_STOP_TIMER.equals(action)) {
                 if (recipeId != null) {
                     stopRecipeTimer(recipeId);
+                }
+            } else if (Constants.ACTION_PAUSE_TIMER.equals(action)) {
+                if (recipeId != null) {
+                    pauseRecipeTimer(recipeId);
+                }
+            } else if (Constants.ACTION_RESUME_TIMER.equals(action)) {
+                if (recipeId != null) {
+                    resumeRecipeTimer(recipeId);
+                }
+            } else if (Constants.ACTION_NAVIGATE_STEP.equals(action)) {
+                if (recipeId != null) {
+                    String direction = intent.getStringExtra(Constants.EXTRA_NAVIGATE_DIRECTION);
+                    navigateStep(recipeId, direction);
                 }
             }
         }
@@ -89,11 +94,12 @@ public class TimerService extends Service {
         }
         Log.d(TAG, "레시피 타이머 시작: " + recipe.getName());
         activeRecipes.put(recipe.getId(), recipe);
+        pausedStates.put(recipe.getId(), false);
 
         // 백그라운드 알람 시퀀스 시작
         RecipeTimer.setAlarm(this, recipe, 0);
         // 포그라운드 타이머 시작
-        startStep(recipe, 0);
+        startStep(recipe, 0, recipe.getSteps().get(0).getDurationInSeconds() * 1000L);
     }
 
     private void stopRecipeTimer(String recipeId) {
@@ -111,6 +117,8 @@ public class TimerService extends Service {
         activeTimers.remove(recipeId);
         activeRecipes.remove(recipeId);
         activeSteps.remove(recipeId);
+        pausedStates.remove(recipeId);
+        pausedTimeRemaining.remove(recipeId);
 
         if (activeRecipes.isEmpty()) {
             Log.d(TAG, "모든 타이머가 종료되어 서비스를 중지합니다.");
@@ -120,7 +128,87 @@ public class TimerService extends Service {
         }
     }
 
-    private void startStep(Recipe recipe, int stepIndex) {
+    private void pauseRecipeTimer(String recipeId) {
+        if (!activeRecipes.containsKey(recipeId)) {
+            return;
+        }
+
+        CountDownTimer timer = activeTimers.get(recipeId);
+        if (timer != null) {
+            timer.cancel();
+        }
+        activeTimers.remove(recipeId);
+        
+        pausedStates.put(recipeId, true);
+        
+        // 일시정지 상태 브로드캐스트
+        Recipe recipe = activeRecipes.get(recipeId);
+        int stepIndex = activeSteps.getOrDefault(recipeId, 0);
+        RecipeStep step = recipe.getSteps().get(stepIndex);
+        long remainingMs = pausedTimeRemaining.getOrDefault(recipeId, step.getDurationInSeconds() * 1000L);
+        long durationMs = step.getDurationInSeconds() * 1000L;
+        
+        broadcastUpdate(recipeId, step.getDescription(), formatTime(remainingMs), 
+                stepIndex, recipe.getSteps().size(), remainingMs, durationMs, true);
+        updateForegroundNotification();
+        
+        Log.d(TAG, "레시피 타이머 일시정지: " + recipeId);
+    }
+
+    private void resumeRecipeTimer(String recipeId) {
+        if (!activeRecipes.containsKey(recipeId) || !pausedStates.getOrDefault(recipeId, false)) {
+            return;
+        }
+
+        Recipe recipe = activeRecipes.get(recipeId);
+        int stepIndex = activeSteps.getOrDefault(recipeId, 0);
+        long remainingMs = pausedTimeRemaining.getOrDefault(recipeId, recipe.getSteps().get(stepIndex).getDurationInSeconds() * 1000L);
+        
+        pausedStates.put(recipeId, false);
+        startStep(recipe, stepIndex, remainingMs);
+        
+        Log.d(TAG, "레시피 타이머 재개: " + recipeId);
+    }
+
+    private void navigateStep(String recipeId, String direction) {
+        Recipe recipe = activeRecipes.get(recipeId);
+        if (recipe == null) {
+            return;
+        }
+
+        int currentStep = activeSteps.getOrDefault(recipeId, 0);
+        int newStep;
+        
+        if ("prev".equals(direction)) {
+            newStep = currentStep - 1;
+            if (newStep < 0) {
+                return; // 첫 번째 단계입니다
+            }
+        } else if ("next".equals(direction)) {
+            newStep = currentStep + 1;
+            if (newStep >= recipe.getSteps().size()) {
+                return; // 마지막 단계입니다
+            }
+        } else {
+            return;
+        }
+
+        // 현재 타이머 취소
+        CountDownTimer timer = activeTimers.get(recipeId);
+        if (timer != null) {
+            timer.cancel();
+        }
+        activeTimers.remove(recipeId);
+
+        // 새로운 단계 시작
+        RecipeTimer.cancelAlarms(this, recipe);
+        RecipeTimer.setAlarm(this, recipe, newStep);
+        startStep(recipe, newStep, recipe.getSteps().get(newStep).getDurationInSeconds() * 1000L);
+        
+        Log.d(TAG, "단계 이동: " + recipeId + " -> " + newStep);
+    }
+
+    private void startStep(Recipe recipe, int stepIndex, long remainingMs) {
         String recipeId = recipe.getId();
         if (stepIndex < 0 || stepIndex >= recipe.getSteps().size()) {
             Log.d(TAG, "레시피 종료: " + recipe.getName());
@@ -141,26 +229,36 @@ public class TimerService extends Service {
         }
 
         long stepDurationMs = step.getDurationInSeconds() * 1000L;
+        long startTime = Math.min(remainingMs, stepDurationMs);
         
         // 초기 상태 브로드캐스트 (타이머 시작 전)
-        String initialTimeFormatted = formatTime(stepDurationMs);
+        String initialTimeFormatted = formatTime(startTime);
         broadcastUpdate(recipeId, step.getDescription(), initialTimeFormatted, 
-                stepIndex, recipe.getSteps().size(), stepDurationMs, stepDurationMs);
+                stepIndex, recipe.getSteps().size(), startTime, stepDurationMs, false);
         
-        CountDownTimer newTimer = new CountDownTimer(stepDurationMs, 1000) {
+        CountDownTimer newTimer = new CountDownTimer(startTime, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
                 String timeFormatted = formatTime(millisUntilFinished);
+                pausedTimeRemaining.put(recipeId, millisUntilFinished);
                 // 단계 정보와 진행률을 포함하여 브로드캐스트
                 broadcastUpdate(recipeId, step.getDescription(), timeFormatted, 
-                        stepIndex, recipe.getSteps().size(), millisUntilFinished, stepDurationMs);
+                        stepIndex, recipe.getSteps().size(), millisUntilFinished, stepDurationMs, false);
                 updateForegroundNotification();
             }
 
             @Override
             public void onFinish() {
-                // AlarmReceiver가 다음 단계를 호출하지만, 앱이 켜져있을 때의 즉각적인 반응을 위해 여기서도 호출
-                startStep(recipe, stepIndex + 1);
+                pausedTimeRemaining.remove(recipeId);
+                // 다음 단계로 이동 (startStep 내부에서 범위 체크를 수행)
+                int nextStepIndex = stepIndex + 1;
+                if (nextStepIndex < recipe.getSteps().size()) {
+                    long nextStepDurationMs = recipe.getSteps().get(nextStepIndex).getDurationInSeconds() * 1000L;
+                    startStep(recipe, nextStepIndex, nextStepDurationMs);
+                } else {
+                    // 마지막 단계 완료 - startStep이 종료 처리를 합니다
+                    startStep(recipe, nextStepIndex, 0);
+                }
             }
         };
         newTimer.start();
@@ -178,7 +276,8 @@ public class TimerService extends Service {
             Recipe recipe = activeRecipes.values().iterator().next();
             int stepIndex = activeSteps.getOrDefault(recipe.getId(), 0);
             RecipeStep step = recipe.getSteps().get(stepIndex);
-            title = "진행 중: " + step.getDescription();
+            boolean isPaused = pausedStates.getOrDefault(recipe.getId(), false);
+            title = (isPaused ? "[일시정지] " : "") + "진행 중: " + step.getDescription();
             text = recipe.getName();
         } else {
             title = timerCount + "개의 레시피가 진행 중입니다.";
@@ -197,20 +296,21 @@ public class TimerService extends Service {
     }
 
     private void broadcastUpdate(String recipeId, String stepDescription, String timeRemaining, 
-                                 int stepIndex, int totalSteps, long timeRemainingMs, long stepDurationMs) {
-        Intent intent = new Intent(ACTION_TIMER_UPDATE);
+                                 int stepIndex, int totalSteps, long timeRemainingMs, long stepDurationMs, boolean isPaused) {
+        Intent intent = new Intent(Constants.ACTION_TIMER_UPDATE);
         intent.putExtra(EXTRA_RECIPE_ID, recipeId);
-        intent.putExtra(EXTRA_STEP_DESCRIPTION, stepDescription);
-        intent.putExtra(EXTRA_TIME_REMAINING_FORMATTED, timeRemaining);
-        intent.putExtra(EXTRA_STEP_INDEX, stepIndex);
-        intent.putExtra(EXTRA_TOTAL_STEPS, totalSteps);
-        intent.putExtra(EXTRA_TIME_REMAINING_MS, timeRemainingMs);
-        intent.putExtra(EXTRA_STEP_DURATION_MS, stepDurationMs);
+        intent.putExtra(Constants.EXTRA_STEP_DESCRIPTION, stepDescription);
+        intent.putExtra(Constants.EXTRA_TIME_REMAINING_FORMATTED, timeRemaining);
+        intent.putExtra(Constants.EXTRA_STEP_INDEX, stepIndex);
+        intent.putExtra(Constants.EXTRA_TOTAL_STEPS, totalSteps);
+        intent.putExtra(Constants.EXTRA_TIME_REMAINING_MS, timeRemainingMs);
+        intent.putExtra(Constants.EXTRA_STEP_DURATION_MS, stepDurationMs);
+        intent.putExtra(Constants.EXTRA_IS_PAUSED, isPaused);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
     private void broadcastFinish(String recipeId) {
-        Intent intent = new Intent(ACTION_TIMER_FINISH);
+        Intent intent = new Intent(Constants.ACTION_TIMER_FINISH);
         intent.putExtra(EXTRA_RECIPE_ID, recipeId);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
@@ -228,6 +328,8 @@ public class TimerService extends Service {
         activeTimers.clear();
         activeRecipes.clear();
         activeSteps.clear();
+        pausedStates.clear();
+        pausedTimeRemaining.clear();
         Log.d(TAG, "TimerService 소멸");
     }
 

@@ -64,13 +64,13 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.RecipeView
      */
     static class RecipeViewHolder extends RecyclerView.ViewHolder {
         private final TextView recipeNameText;
-        private final TextView recipeInfoText;
-        private final ImageView favoriteIcon;
+        private final TextView recipeDescriptionText;
+        private final android.widget.ImageButton favoriteIcon;
 
         public RecipeViewHolder(@NonNull View itemView) {
             super(itemView);
             recipeNameText = itemView.findViewById(R.id.recipe_name_text);
-            recipeInfoText = itemView.findViewById(R.id.recipe_info_text);
+            recipeDescriptionText = itemView.findViewById(R.id.item_recipe_description);
             favoriteIcon = itemView.findViewById(R.id.favorite_icon);
         }
 
@@ -88,12 +88,12 @@ public class RecipeAdapter extends RecyclerView.Adapter<RecipeAdapter.RecipeView
             if (stepCount > 0) {
                 infoText += " · " + stepCount + "단계";
             }
-            recipeInfoText.setText(infoText);
+            recipeDescriptionText.setText(infoText);
 
             if (recipe.isFavorite()) {
-                favoriteIcon.setImageResource(android.R.drawable.btn_star_big_on);
+                favoriteIcon.setImageResource(R.drawable.ic_favorite_on);
             } else {
-                favoriteIcon.setImageResource(android.R.drawable.btn_star_big_off);
+                favoriteIcon.setImageResource(R.drawable.ic_favorite_off);
             }
 
             itemView.setOnClickListener(v -> recipeClickListener.onRecipeClick(recipe));

@@ -40,6 +40,10 @@
             android:name=".AddRecipeActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".RecipeCompleteActivity"
+            android:exported="false" />
+
         <receiver
             android:name=".AlarmReceiver"
             android:enabled="true"
